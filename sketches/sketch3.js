@@ -14,7 +14,7 @@ registerSketch('sk3', function (p) {
     let m = p.minute();
     let s = p.second();
     
-    // Draw background
+    // Draw background with stars
     drawBackground();
     
     // Draw moon clock (shows hours)
@@ -26,8 +26,11 @@ registerSketch('sk3', function (p) {
     p.push();
     p.translate(lotusCenter.x, lotusCenter.y);
     
-    // Draw petals
-    drawPetals(remainingPetals);
+    // Draw water ripples
+    drawWaterRipples();
+    
+    // Draw petals with breathing effect
+    drawPetals(remainingPetals, s);
     
     // Draw lotus center
     drawLotusCenter(remainingPetals);
@@ -50,6 +53,17 @@ registerSketch('sk3', function (p) {
       p.stroke(c);
       p.line(0, y, canvasSize, y);
     }
+    
+    // Draw stars
+    p.randomSeed(42);
+    p.noStroke();
+    for (let i = 0; i < 100; i++) {
+      let x = p.random(canvasSize);
+      let y = p.random(canvasSize);
+      let alpha = p.random(100, 255);
+      p.fill(255, 255, 255, alpha);
+      p.ellipse(x, y, p.random(1, 3), p.random(1, 3));
+    }
   }
   
   function drawMoonClock(hour, second) {
@@ -60,8 +74,16 @@ registerSketch('sk3', function (p) {
     p.push();
     p.translate(moonX, moonY);
     
-    // Moon body
+    // Moon glow - NEW!
     p.noStroke();
+    for (let i = 0; i < 4; i++) {
+      let alpha = p.map(i, 0, 4, 40, 0);
+      let size = moonSize + i * 20;
+      p.fill(255, 250, 200, alpha);
+      p.ellipse(0, 0, size, size);
+    }
+    
+    // Moon body
     p.fill(245, 242, 220);
     p.ellipse(0, 0, moonSize, moonSize);
     
@@ -106,17 +128,34 @@ registerSketch('sk3', function (p) {
     p.pop();
   }
   
-  function drawPetals(remainingPetals) {
+  function drawWaterRipples() {
+    // Water ripples - NEW!
+    p.noFill();
+    for (let i = 0; i < 4; i++) {
+      let alpha = p.map(i, 0, 4, 60, 10);
+      p.stroke(100, 180, 200, alpha);
+      p.strokeWeight(1);
+      let size = 260 + i * 40;
+      p.ellipse(0, 0, size, size * 0.25);
+    }
+  }
+  
+  function drawPetals(remainingPetals, second) {
     let totalPetals = 60;
     let baseRadius = 180;
     
-    // Draw remaining petals
+    // Draw remaining petals (clockwise from top)
     for (let i = 0; i < remainingPetals; i++) {
+      // Start from top and go clockwise
       let angle = p.map(i, 0, totalPetals, 0, p.TWO_PI) - p.HALF_PI;
       
+      // Add breathing effect based on seconds - NEW!
+      let breathe = p.sin(p.map(second, 0, 60, 0, p.TWO_PI) + i * 0.1) * 3;
+      let radius = baseRadius + breathe;
+      
       // Calculate petal position
-      let petalX = p.cos(angle) * baseRadius;
-      let petalY = p.sin(angle) * baseRadius;
+      let petalX = p.cos(angle) * radius;
+      let petalY = p.sin(angle) * radius;
       
       // Draw petal
       drawPetal(petalX, petalY, angle, i, totalPetals);
@@ -158,8 +197,15 @@ registerSketch('sk3', function (p) {
     // Center size based on remaining petals
     let centerSize = p.map(remaining, 60, 0, 60, 30);
     
-    // Center
+    // Outer glow - NEW!
     p.noStroke();
+    for (let i = 0; i < 4; i++) {
+      let alpha = p.map(i, 0, 4, 80, 0);
+      p.fill(255, 220, 100, alpha);
+      p.ellipse(0, 0, centerSize + i * 15, centerSize + i * 15);
+    }
+    
+    // Center
     p.fill(255, 215, 0);
     p.ellipse(0, 0, centerSize, centerSize);
     
