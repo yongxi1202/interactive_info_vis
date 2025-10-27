@@ -1,7 +1,8 @@
-// Instance-mode sketch for tab 3 - Lunar Lotus Clock
+// Instance-mode sketch for tab 3 - Lunar Lotus Clock (Redesigned)
 registerSketch('sk3', function (p) {
   let canvasSize = 800;
   let lotusCenter;
+  let fallingPetals = []; // Store fallen petals
   
   p.setup = function () {
     p.createCanvas(canvasSize, canvasSize);
@@ -10,35 +11,26 @@ registerSketch('sk3', function (p) {
   
   p.draw = function () {
     // Get current time
-    let h = p.hour() % 12;
+    let h = p.hour() % 12; // 12-hour format
     let m = p.minute();
     let s = p.second();
     
-    // Draw background with stars
+    // Draw background with gradient
     drawBackground();
     
     // Draw moon clock (shows hours)
     drawMoonClock(h, s);
     
     // Draw lotus with 60 petals
+    // Remaining petals = 60 - current minute
     let remainingPetals = 60 - m;
+    drawLotus(remainingPetals, s);
     
-    p.push();
-    p.translate(lotusCenter.x, lotusCenter.y);
-    
-    // Draw water ripples
-    drawWaterRipples();
-    
-    // Draw petals with breathing effect
-    drawPetals(remainingPetals, s);
-    
-    // Draw lotus center
-    drawLotusCenter(remainingPetals);
-    
-    p.pop();
+    // Update and draw falling petals
+    updateFallingPetals(m);
     
     // Draw time display
-    drawTimeDisplay(h, m, s, remainingPetals);
+    drawTimeDisplay(h, m, s);
   };
   
   function drawBackground() {
@@ -74,7 +66,7 @@ registerSketch('sk3', function (p) {
     p.push();
     p.translate(moonX, moonY);
     
-    // Moon glow - NEW!
+    // Moon glow
     p.noStroke();
     for (let i = 0; i < 4; i++) {
       let alpha = p.map(i, 0, 4, 40, 0);
@@ -128,28 +120,21 @@ registerSketch('sk3', function (p) {
     p.pop();
   }
   
-  function drawWaterRipples() {
-    // Water ripples - NEW!
-    p.noFill();
-    for (let i = 0; i < 4; i++) {
-      let alpha = p.map(i, 0, 4, 60, 10);
-      p.stroke(100, 180, 200, alpha);
-      p.strokeWeight(1);
-      let size = 260 + i * 40;
-      p.ellipse(0, 0, size, size * 0.25);
-    }
-  }
-  
-  function drawPetals(remainingPetals, second) {
+  function drawLotus(remainingPetals, second) {
     let totalPetals = 60;
     let baseRadius = 180;
     
-    // Draw remaining petals (clockwise from top)
+    p.push();
+    p.translate(lotusCenter.x, lotusCenter.y);
+    
+    // Draw water surface
+    drawWater();
+    
+    // Draw remaining petals
     for (let i = 0; i < remainingPetals; i++) {
-      // Start from top and go clockwise
       let angle = p.map(i, 0, totalPetals, 0, p.TWO_PI) - p.HALF_PI;
       
-      // Add breathing effect based on seconds - NEW!
+      // Add breathing effect based on seconds
       let breathe = p.sin(p.map(second, 0, 60, 0, p.TWO_PI) + i * 0.1) * 3;
       let radius = baseRadius + breathe;
       
@@ -159,6 +144,23 @@ registerSketch('sk3', function (p) {
       
       // Draw petal
       drawPetal(petalX, petalY, angle, i, totalPetals);
+    }
+    
+    // Draw lotus center
+    drawLotusCenter(remainingPetals, totalPetals);
+    
+    p.pop();
+  }
+  
+  function drawWater() {
+    // Water ripples
+    p.noFill();
+    for (let i = 0; i < 4; i++) {
+      let alpha = p.map(i, 0, 4, 60, 10);
+      p.stroke(100, 180, 200, alpha);
+      p.strokeWeight(1);
+      let size = 260 + i * 40;
+      p.ellipse(0, 0, size, size * 0.25);
     }
   }
   
@@ -193,11 +195,11 @@ registerSketch('sk3', function (p) {
     p.pop();
   }
   
-  function drawLotusCenter(remaining) {
+  function drawLotusCenter(remaining, total) {
     // Center size based on remaining petals
     let centerSize = p.map(remaining, 60, 0, 60, 30);
     
-    // Outer glow - NEW!
+    // Outer glow
     p.noStroke();
     for (let i = 0; i < 4; i++) {
       let alpha = p.map(i, 0, 4, 80, 0);
@@ -231,8 +233,58 @@ registerSketch('sk3', function (p) {
     }
   }
   
-  function drawTimeDisplay(h, m, s, remaining) {
+  function updateFallingPetals(currentMinute) {
+    // Check if a new minute has started and add falling petal
+    if (p.frameCount % 60 === 0 && currentMinute > 0) {
+      let angle = p.map(60 - currentMinute, 0, 60, 0, p.TWO_PI) - p.HALF_PI;
+      let startX = lotusCenter.x + p.cos(angle) * 180;
+      let startY = lotusCenter.y + p.sin(angle) * 180;
+      
+      fallingPetals.push({
+        x: startX,
+        y: startY,
+        speedY: p.random(1, 2),
+        speedX: p.random(-0.5, 0.5),
+        rotation: p.random(p.TWO_PI),
+        rotationSpeed: p.random(-0.05, 0.05),
+        alpha: 255
+      });
+    }
+    
+    // Update and draw falling petals
+    for (let i = fallingPetals.length - 1; i >= 0; i--) {
+      let petal = fallingPetals[i];
+      
+      // Update position
+      petal.y += petal.speedY;
+      petal.x += petal.speedX;
+      petal.rotation += petal.rotationSpeed;
+      petal.alpha -= 2;
+      
+      // Draw falling petal
+      p.push();
+      p.translate(petal.x, petal.y);
+      p.rotate(petal.rotation);
+      p.noStroke();
+      p.fill(255, 182, 193, petal.alpha);
+      p.ellipse(0, 0, 20, 35);
+      p.pop();
+      
+      // Remove if off screen or invisible
+      if (petal.y > canvasSize || petal.alpha <= 0) {
+        fallingPetals.splice(i, 1);
+      }
+    }
+    
+    // Clear falling petals at the start of each hour
+    if (currentMinute === 0 && p.second() === 0) {
+      fallingPetals = [];
+    }
+  }
+  
+  function drawTimeDisplay(h, m, s) {
     // Display remaining petals
+    let remaining = 60 - m;
     p.fill(255, 255, 255, 150);
     p.noStroke();
     p.textAlign(p.CENTER, p.CENTER);
