@@ -17,8 +17,10 @@ registerSketch('sk3', function (p) {
     // Draw background
     drawBackground();
     
+    // Draw moon clock (shows hours)
+    drawMoonClock(h, s);
+    
     // Draw lotus with 60 petals
-    // Remaining petals = 60 - current minute
     let remainingPetals = 60 - m;
     
     p.push();
@@ -48,6 +50,60 @@ registerSketch('sk3', function (p) {
       p.stroke(c);
       p.line(0, y, canvasSize, y);
     }
+  }
+  
+  function drawMoonClock(hour, second) {
+    let moonX = canvasSize * 0.8;
+    let moonY = canvasSize * 0.2;
+    let moonSize = 120;
+    
+    p.push();
+    p.translate(moonX, moonY);
+    
+    // Moon body
+    p.noStroke();
+    p.fill(245, 242, 220);
+    p.ellipse(0, 0, moonSize, moonSize);
+    
+    // Draw 12 hour marks
+    p.stroke(100, 100, 120);
+    p.strokeWeight(2);
+    for (let i = 0; i < 12; i++) {
+      let angle = p.map(i, 0, 12, 0, p.TWO_PI) - p.HALF_PI;
+      let x1 = p.cos(angle) * (moonSize * 0.4);
+      let y1 = p.sin(angle) * (moonSize * 0.4);
+      let x2 = p.cos(angle) * (moonSize * 0.48);
+      let y2 = p.sin(angle) * (moonSize * 0.48);
+      
+      // Highlight current hour
+      if (i === hour) {
+        p.strokeWeight(4);
+        p.stroke(255, 200, 100);
+      } else {
+        p.strokeWeight(2);
+        p.stroke(100, 100, 120);
+      }
+      p.line(x1, y1, x2, y2);
+    }
+    
+    // Draw hour hand
+    let hourAngle = p.map(hour, 0, 12, 0, p.TWO_PI) - p.HALF_PI;
+    // Add smooth second movement
+    hourAngle += p.map(second, 0, 60, 0, p.TWO_PI / 12);
+    
+    p.stroke(255, 200, 100);
+    p.strokeWeight(3);
+    let handLength = moonSize * 0.3;
+    let handX = p.cos(hourAngle) * handLength;
+    let handY = p.sin(hourAngle) * handLength;
+    p.line(0, 0, handX, handY);
+    
+    // Center dot
+    p.noStroke();
+    p.fill(255, 200, 100);
+    p.ellipse(0, 0, 8, 8);
+    
+    p.pop();
   }
   
   function drawPetals(remainingPetals) {
