@@ -1,4 +1,4 @@
-const boxBreathingClock = function (p) {
+registerSketch('sk2', function (p) {
   const canvasSize = 800;
   const duration = 4000;
   const totalPhases = 4;
@@ -152,6 +152,4 @@ const boxBreathingClock = function (p) {
     phase = 0; // Reset to the first phase
     startTime = p.millis(); // Reset the start time
   };
-};
-
-new p5(boxBreathingClock);
+});
