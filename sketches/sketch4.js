@@ -2,6 +2,12 @@
 registerSketch('sk4', function (p) {
   let canvasSize = 800;
   let centerX, centerY;
+  let breathingSpeed = 'normal'; // 'slow', 'normal', 'fast'
+  let breathingCycles = {
+    slow: 12000,    // 6s inhale + 6s exhale
+    normal: 8000,   // 4s inhale + 4s exhale
+    fast: 6000      // 3s inhale + 3s exhale
+  };
   
   p.setup = function () {
     p.createCanvas(canvasSize, canvasSize);
@@ -16,8 +22,9 @@ registerSketch('sk4', function (p) {
     let s = p.second();
     let ms = p.millis();
     
-    // Calculate breathing cycle (4-second inhale, 4-second exhale)
-    let breathCycle = (ms % 8000) / 8000; // 0 to 1 over 8 seconds
+    // Calculate breathing cycle based on current speed
+    let cycleTime = breathingCycles[breathingSpeed];
+    let breathCycle = (ms % cycleTime) / cycleTime; // 0 to 1
     let breathAmount;
     let isInhaling;
     
@@ -47,6 +54,25 @@ registerSketch('sk4', function (p) {
     
     // Draw time display
     drawTimeDisplay(h, m, s);
+    
+    // Draw speed indicator
+    drawSpeedIndicator();
+  };
+  
+  p.mousePressed = function() {
+    // Check if clicked on moon
+    let d = p.dist(p.mouseX, p.mouseY, centerX, centerY);
+    if (d < 200) { // Moon area
+      // Cycle through speeds: normal -> slow -> fast -> normal
+      if (breathingSpeed === 'normal') {
+        breathingSpeed = 'slow';
+      } else if (breathingSpeed === 'slow') {
+        breathingSpeed = 'fast';
+      } else {
+        breathingSpeed = 'normal';
+      }
+    }
+    return false; // Prevent default behavior
   };
   
   // Easing function for smooth breathing
@@ -140,6 +166,29 @@ registerSketch('sk4', function (p) {
     p.textAlign(p.CENTER, p.CENTER);
     p.textSize(14);
     p.text(`${p.nf(h, 2)}:${p.nf(m, 2)}:${p.nf(s, 2)}`, centerX, canvasSize - 40);
+  }
+  
+  function drawSpeedIndicator() {
+    // Display current breathing speed
+    let speedText = '';
+    let speedColor = [255, 255, 255];
+    
+    if (breathingSpeed === 'slow') {
+      speedText = 'Deep Breathing (6-6s)';
+      speedColor = [150, 200, 255]; // Light blue
+    } else if (breathingSpeed === 'normal') {
+      speedText = 'Normal Breathing (4-4s)';
+      speedColor = [200, 255, 200]; // Light green
+    } else {
+      speedText = 'Quick Breathing (3-3s)';
+      speedColor = [255, 200, 150]; // Light orange
+    }
+    
+    p.fill(speedColor[0], speedColor[1], speedColor[2], 150);
+    p.noStroke();
+    p.textAlign(p.CENTER, p.CENTER);
+    p.textSize(14);
+    p.text(speedText, centerX, 60);
   }
   
   p.windowResized = function () {
