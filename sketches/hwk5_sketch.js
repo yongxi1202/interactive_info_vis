@@ -19,25 +19,26 @@ let hwk5 = function(p) {
     let bestDay = null;
     let worstDay = null;
     
-    // Preload data
     p.preload = function() {
-      data = p.loadTable('data/flight_delays_calendar.csv', 'csv', 'header', processData);
-      loaded = true;
+      data = p.loadTable('data/flight_delays_calendar.csv', 'csv', 'header', 
+        function() {
+          processData();
+          loaded = true;
+        },
+        function(err) {
+          console.error('Error loading:', err);
+        }
+      );
     };
     
-    // Setup
     p.setup = function() {
       let canvas = p.createCanvas(1080, 1080);
       canvas.parent('sketch-container-sk15');
       p.textFont('monospace');
-      p.noLoop();
+      p.noLoop(); //
     };
     
-    // Process data
     function processData() {
-      let minDelay = Infinity;
-      let maxDelay = -Infinity;
-      
       let tempMonthDayData = {};
       
       for (let i = 0; i < data.getRowCount(); i++) {
@@ -49,7 +50,6 @@ let hwk5 = function(p) {
         
         let [year, month, day] = date.split('-').map(Number);
         
-        // Store original daily data
         dailyData[date] = {
           date: date,
           year: year,
@@ -60,16 +60,6 @@ let hwk5 = function(p) {
           numFlights: numFlights,
           dayName: row.getString('day_name')
         };
-        
-        // Track best and worst
-        if (delayRate < minDelay) {
-          minDelay = delayRate;
-          bestDay = dailyData[date];
-        }
-        if (delayRate > maxDelay) {
-          maxDelay = delayRate;
-          worstDay = dailyData[date];
-        }
         
         let monthDayKey = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
@@ -90,6 +80,9 @@ let hwk5 = function(p) {
         tempMonthDayData[monthDayKey].dates.push(date);
       }
       
+      let minAvgDelay = Infinity;
+      let maxAvgDelay = -Infinity;
+      
       for (let monthDayKey in tempMonthDayData) {
         let item = tempMonthDayData[monthDayKey];
         let avgDelayRate = item.totalDelayRate / item.count;
@@ -101,33 +94,42 @@ let hwk5 = function(p) {
           aggregatedMonthlyData[monthKey] = [];
         }
         
-        aggregatedMonthlyData[monthKey].push({
+        let aggregatedDay = {
           month: item.month,
           day: item.day,
           delayRate: avgDelayRate,
           avgDelay: avgAvgDelay,
           count: item.count,
           dates: item.dates
-        });
+        };
+        
+        aggregatedMonthlyData[monthKey].push(aggregatedDay);
+        
+        if (avgAvgDelay < minAvgDelay) {
+          minAvgDelay = avgAvgDelay;
+          bestDay = aggregatedDay;
+        }
+        if (avgAvgDelay > maxAvgDelay) {
+          maxAvgDelay = avgAvgDelay;
+          worstDay = aggregatedDay;
+        }
       }
       
-      // Sort each month's days
       for (let monthKey in aggregatedMonthlyData) {
         aggregatedMonthlyData[monthKey].sort((a, b) => a.day - b.day);
       }
       
       console.log('Processed days:', Object.keys(dailyData).length);
-      console.log('Aggregated months:', Object.keys(aggregatedMonthlyData).length);
+      console.log('Aggregated days:', Object.keys(tempMonthDayData).length);
       console.log('Best day:', bestDay);
       console.log('Worst day:', worstDay);
     }
     
-    // Draw
     p.draw = function() {
-      p.background(250, 245, 235);
+      p.background(25, 35, 50);
       
       if (!loaded) {
-        p.fill(0);
+        p.fill(255);
         p.textSize(20);
         p.textAlign(p.CENTER, p.CENTER);
         p.text('Loading data...', p.width/2, p.height/2);
@@ -135,7 +137,7 @@ let hwk5 = function(p) {
       }
       
       // Title
-      p.fill(0);
+      p.fill(255);
       p.textSize(28);
       p.textAlign(p.CENTER);
       p.text('CALENDAR HEATMAP: When to Fly', p.width/2, 40);
@@ -146,7 +148,6 @@ let hwk5 = function(p) {
       drawLegend();
     }
     
-    // Draw calendar
     function drawCalendar() {
       const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
                       'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -156,7 +157,7 @@ let hwk5 = function(p) {
       const col1X = MARGIN + 60;
       const col2X = p.width/2 + 40;
       
-      hoveredDay = null;
+      hoveredDay = null; // Reset hover state
       
       for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
         let month = monthIdx + 1;
@@ -167,12 +168,11 @@ let hwk5 = function(p) {
         let y = startY + (monthIdx % 6) * rowHeight;
         
         // Month label
-        p.fill(0);
+        p.fill(255);
         p.textSize(13);
         p.textAlign(p.RIGHT, p.CENTER);
         p.text(months[monthIdx], x - 10, y);
         
-        // Get aggregated days for this month
         let daysInMonth = aggregatedMonthlyData[monthStr];
         
         if (daysInMonth && daysInMonth.length > 0) {
@@ -185,15 +185,14 @@ let hwk5 = function(p) {
             let cx = x + d * CIRCLE_SPACING;
             let cy = y;
             
-            // Color based on delay rate
             let color = getColorForDelay(dayData.delayRate);
             p.fill(color[0], color[1], color[2]);
             p.noStroke();
             p.circle(cx, cy, CIRCLE_SIZE);
             
-            // Check hover
+            // Hover detection
             let dist = p.dist(p.mouseX, p.mouseY, cx, cy);
-            if (dist < CIRCLE_SIZE/2 + 2) {
+            if (dist < CIRCLE_SIZE/2 + 5) {
               hoveredDay = {
                 data: dayData,
                 x: cx,
@@ -227,31 +226,28 @@ let hwk5 = function(p) {
       // Worst day
       p.fill(RED[0], RED[1], RED[2]);
       p.circle(MARGIN + 20, y, 18);
-      p.fill(0);
+      p.fill(255);
       p.textSize(14);
       p.textAlign(p.LEFT, p.CENTER);
       
-      let worstDate = new Date(worstDay.date);
-      let worstDateStr = worstDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       
-      p.text(`${worstDateStr}: WORST DAY OF YEAR (${worstDay.delayRate.toFixed(1)}% delay rate)`, 
+      let worstMonth = monthNames[worstDay.month - 1];
+      p.text(`${worstMonth} ${worstDay.day}: WORST DAY (avg ${worstDay.avgDelay.toFixed(0)} min delay)`, 
              MARGIN + 40, y);
       
       // Best day
       p.fill(GREEN[0], GREEN[1], GREEN[2]);
       p.circle(MARGIN + 20, y + 35, 18);
-      p.fill(0);
+      p.fill(255);
       
-      let bestDate = new Date(bestDay.date);
-      let bestDateStr = bestDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
+      let bestMonth = monthNames[bestDay.month - 1];
+      let bestText = bestDay.avgDelay < 0 
+        ? `avg ${Math.abs(bestDay.avgDelay).toFixed(0)} min EARLY`
+        : `avg ${bestDay.avgDelay.toFixed(0)} min DELAY`;
       
-      p.text(`${bestDateStr}: BEST DAY OF YEAR (${bestDay.delayRate.toFixed(1)}% delay rate)`, 
+      p.text(`${bestMonth} ${bestDay.day}: BEST DAY (${bestText})`, 
              MARGIN + 40, y + 35);
       
       // Color legend
@@ -261,68 +257,82 @@ let hwk5 = function(p) {
       
       p.fill(GREEN[0], GREEN[1], GREEN[2]);
       p.circle(MARGIN + 40, legendY, 16);
-      p.fill(0);
-      p.text('Low delay risk (<20%)', MARGIN + 65, legendY);
+      p.fill(255);
+      p.text('Low delay rate (<20%)', MARGIN + 65, legendY);
       
       p.fill(YELLOW[0], YELLOW[1], YELLOW[2]);
       p.circle(MARGIN + 280, legendY, 16);
-      p.fill(0);
+      p.fill(255);
       p.text('Medium (20-35%)', MARGIN + 305, legendY);
       
       p.fill(RED[0], RED[1], RED[2]);
       p.circle(MARGIN + 480, legendY, 16);
-      p.fill(0);
-      p.text('High delay risk (>35%)', MARGIN + 505, legendY);
+      p.fill(255);
+      p.text('High delay rate (>35%)', MARGIN + 505, legendY);
       
       // Data source
       p.fill(120);
       p.textSize(11);
       p.textAlign(p.CENTER, p.CENTER);
-      p.text('Data: US DOT Flight Delays 2019-2023 (averaged across years) | Hover for details', 
+      p.text('Data: US Department of Transportation, Flight Delays 2019-2023', 
              p.width/2, y + 175);
     }
     
     function drawTooltip(hovered) {
       let day = hovered.data;
       let tx = hovered.x;
-      let ty = hovered.y - 75;
+      let ty = hovered.y - 95;
       
-      if (tx < 150) tx = 150;
-      if (tx > p.width - 150) tx = p.width - 150;
-      if (ty < 100) ty = hovered.y + 35;
+      // Adjust position
+      if (tx < 170) tx = 170;
+      if (tx > p.width - 170) tx = p.width - 170;
+      if (ty < 110) ty = hovered.y + 40;
+      
+      // Shadow
+      p.fill(0, 0, 0, 30);
+      p.noStroke();
+      p.rect(tx - 163, ty - 38, 330, 90, 5);
       
       // Box
       p.fill(255, 255, 255, 250);
       p.stroke(0);
       p.strokeWeight(2);
-      p.rect(tx - 140, ty - 32, 280, 65, 5);
+      p.rect(tx - 165, ty - 40, 330, 90, 5);
       
       // Text
       p.fill(0);
       p.noStroke();
-      p.textSize(12);
       p.textAlign(p.LEFT, p.TOP);
       
-      // Show month and day (averaged across all years)
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       let monthName = monthNames[day.month - 1];
       
-      p.text(`${monthName} ${day.day} (avg of ${day.count} years)`, tx - 130, ty - 22);
-      p.text(`Avg Delay Rate: ${day.delayRate.toFixed(1)}%`, tx - 130, ty - 2);
-      p.text(`Avg Delay: ${day.avgDelay.toFixed(0)} minutes`, tx - 130, ty + 18);
-      p.text(`Based on: ${day.dates.join(', ')}`, tx - 130, ty + 38);
+      // Title
+      p.textSize(14);
+      p.text(`${monthName} ${day.day} (avg of ${day.count} years)`, tx - 155, ty - 30);
+      
+      // Main info
+      p.textSize(13);
+      let delayText = day.avgDelay < 0 
+        ? `Avg ${Math.abs(day.avgDelay).toFixed(0)} min EARLY` 
+        : `Avg ${day.avgDelay.toFixed(0)} min DELAY`;
+      
+      p.text(`Delay Rate: ${day.delayRate.toFixed(1)}%  |  ${delayText}`, 
+             tx - 155, ty - 5);
+      
+      // Years
+      let years = day.dates.map(d => d.split('-')[0]);
+      p.textSize(11);
+      p.fill(100);
+      p.text(`Based on years: ${years.join(', ')}`, tx - 155, ty + 20);
+      
     }
     
     p.mouseMoved = function() {
-      let prevHovered = hoveredDay;
-      hoveredDay = null;
-      
-      if (prevHovered || hoveredDay) {
         p.redraw();
-      }
+      };
+      
     };
     
-  };
-  
-  new p5(hwk5, 'sketch-container-sk15');
+    new p5(hwk5, 'sketch-container-sk15');
