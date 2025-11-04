@@ -32,7 +32,7 @@ let hwk5 = function(p) {
     };
     
     p.setup = function() {
-      let canvas = p.createCanvas(1080, 1080);
+      let canvas = p.createCanvas(1080, 608);
       canvas.parent('sketch-container-sk15');
       p.textFont('monospace');
       p.noLoop(); //
@@ -126,7 +126,7 @@ let hwk5 = function(p) {
     }
     
     p.draw = function() {
-      p.background(25, 35, 50);
+      p.background(40, 50, 65);
       
       if (!loaded) {
         p.fill(255);
